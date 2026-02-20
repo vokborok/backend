@@ -1,0 +1,30 @@
+{
+    "include": [
+        "backend/app"
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        "**/.*"
+    ],
+    "extraPaths": [
+        "backend",
+        "backend/app"
+    ],
+    "pythonVersion": "3.12",
+    "pythonPlatform": "Windows",
+    "executionEnvironments": [
+        {
+            "root": "backend",
+            "pythonVersion": "3.12",
+            "extraPaths": [
+                "backend",
+                "backend/app"
+            ]
+        }
+    ],
+    "typeCheckingMode": "basic",
+    "useLibraryCodeForTypes": true,
+    "autoImportCompletions": true,
+    "autoSearchPaths": true
+}

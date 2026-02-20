@@ -1,0 +1,133 @@
+services:
+  # ===========================================
+  # GAME SERVICES
+  # ===========================================
+  backend:
+    image: ${GAME_NAME}-backend:latest
+    container_name: ${GAME_NAME}-backend
+    build:
+      context: backend/
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    env_file:
+      - ./backend/.env
+      - ./backend/.env.secret
+    environment:
+      - LOG_LEVEL=INFO
+      - GAME_NAME=${GAME_NAME}
+      - GAME_PREFIX=${GAME_PREFIX}
+      - POSTGRES__DSN=postgresql://${GAME_NAME}:${GAME_NAME}@backend-db:5432/${GAME_NAME}
+    volumes:
+      - ./backend/:/backend:rw
+      - /backend/.venv
+    ports:
+      - "${BACKEND_PORT:-8002}:8000"
+    restart: always
+    depends_on:
+      backend-db:
+        condition: service_healthy
+      clickhouse:
+        condition: service_started
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  backend-test:
+    extends: backend
+    container_name: ${GAME_NAME}-backend-test
+    env_file:
+      - ./backend/.test.env
+    environment:
+      - POSTGRES__DSN=postgresql://${GAME_NAME}:${GAME_NAME}@backend-db:5432/${GAME_NAME}_test
+    depends_on:
+      - backend-db
+    profiles:
+      - test
+
+  backend-db:
+    image: postgres:14
+    container_name: ${GAME_NAME}-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${GAME_NAME}
+      POSTGRES_PASSWORD: ${GAME_NAME}
+      POSTGRES_DB: ${GAME_NAME}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - app-db-data:/var/lib/postgresql/data
+      - ./docker_assets/backend_db/:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${GAME_NAME} -d ${GAME_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # ANALYTICS SERVICES
+  # ===========================================
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.1
+    container_name: ${GAME_NAME}-clickhouse
+    ports:
+      - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+      - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - clickhouse-logs:/var/log/clickhouse-server
+      - ./clickhouse/init:/docker-entrypoint-initdb.d
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml
+    environment:
+      CLICKHOUSE_DB: analytics
+      CLICKHOUSE_USER: analytics
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-analytics_secret_2026}
+    restart: always
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: ${GAME_NAME}-metabase
+    ports:
+      - "${METABASE_PORT:-3000}:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase
+      MB_DB_PASS: ${METABASE_DB_PASSWORD:-metabase_secret_2026}
+      MB_DB_HOST: metabase-db
+      JAVA_OPTS: "-Xmx512m"
+      MB_COLORIZE_LOGS: "false"
+    volumes:
+      - metabase-data:/metabase-data
+    logging:
+      driver: none
+    depends_on:
+      metabase-db:
+        condition: service_healthy
+      clickhouse:
+        condition: service_started
+    restart: always
+
+  metabase-db:
+    image: postgres:14-alpine
+    container_name: ${GAME_NAME}-metabase-db
+    environment:
+      POSTGRES_DB: metabase
+      POSTGRES_USER: metabase
+      POSTGRES_PASSWORD: ${METABASE_DB_PASSWORD:-metabase_secret_2026}
+    volumes:
+      - metabase-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metabase -d metabase"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: always
+
+volumes:
+  app-db-data:
+  clickhouse-data:
+  clickhouse-logs:
+  metabase-data:
+  metabase-db-data:
