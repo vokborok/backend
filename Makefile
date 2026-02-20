@@ -29,10 +29,6 @@ Available <target>:
 	clean-volumes   - Clean all volumes (WARNING: removes database data)
 	restart-clean   - Restart with cleanup
 
-	Analytics (ClickHouse):
-	ch/migrate      - Apply ClickHouse migrations
-	ch/status       - Show ClickHouse table counts
-
 endef
 export HELP
 
@@ -85,16 +81,3 @@ clean-volumes:
 
 restart-clean: down clean up
 	@echo "Server restarted with cleanup"
-
-# ClickHouse Analytics commands
-CLICKHOUSE_USER ?= analytics
-
-ch/migrate:
-	@echo "Applying ClickHouse migrations..."
-	CLICKHOUSE_USER=$(CLICKHOUSE_USER) CLICKHOUSE_PASSWORD=$(CLICKHOUSE_PASSWORD) \
-		python3 scripts/apply_clickhouse_migrations.py
-
-ch/status:
-	@echo "ClickHouse table counts:"
-	@curl -s "http://localhost:$(CLICKHOUSE_HTTP_PORT)/?user=$(CLICKHOUSE_USER)&password=$(CLICKHOUSE_PASSWORD)" \
-		--data "SELECT 'events', count() FROM analytics.events UNION ALL SELECT 'sessions', count() FROM analytics.sessions UNION ALL SELECT 'users_first_touch', count() FROM analytics.users_first_touch UNION ALL SELECT 'payments', count() FROM analytics.payments"

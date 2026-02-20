@@ -3,8 +3,6 @@
 Шаблон игрового сервера для Telegram Mini Apps с поддержкой:
 - FastAPI backend
 - PostgreSQL для хранения данных
-- ClickHouse для аналитики
-- Metabase для визуализации
 - Telegram Bot API интеграция
 - Система энергии
 
@@ -36,8 +34,6 @@ GAME_PREFIX=mng
 # Порты (измените если конфликтуют с другими сервисами)
 BACKEND_PORT=8002
 POSTGRES_PORT=5433
-CLICKHOUSE_HTTP_PORT=8123
-METABASE_PORT=3000
 ```
 
 В файле `backend/.env.secret`:
@@ -66,7 +62,6 @@ make logs
 
 - **API документация (Swagger):** http://localhost:8002/docs
 - **Health check:** http://localhost:8002/health
-- **Metabase:** http://localhost:3000
 
 ## 📁 Структура проекта
 
@@ -83,13 +78,10 @@ ExampleGame/
 │   │   ├── users/         # Модуль пользователей
 │   │   ├── energy/        # Система энергии
 │   │   ├── tg/            # Telegram интеграция
-│   │   ├── payments/      # Платежи
-│   │   ├── game/          # Игровая логика (расширяйте)
-│   │   └── analytics/     # ClickHouse аналитика
+│   │   └── game/          # Игровая логика (расширяйте)
 │   └── db_migrations/     # Миграции БД
 │
 ├── apache2/               # Apache конфигурация
-├── clickhouse/            # ClickHouse настройки
 └── systemd/               # Systemd сервисы
 ```
 
@@ -116,10 +108,6 @@ make backend/typecheck      # Проверка типов
 # Docker
 make clean                  # Очистка Docker ресурсов
 make clean-all              # Полная очистка
-
-# ClickHouse
-make ch/status              # Статус таблиц
-make ch/migrate             # Применить миграции
 ```
 
 ## 🎮 API Endpoints
@@ -151,16 +139,6 @@ make ch/migrate             # Применить миграции
 3. Отредактируйте `apache2/example.conf`
 4. Запустите `apache2/setup-apache-proxy.sh`
 5. Настройте systemd сервис
-
-## 📊 Аналитика
-
-Проект использует ClickHouse для сбора аналитики:
-- События пользователей
-- Платежи
-- Сессии
-- Воронки
-
-Просмотр через Metabase: http://localhost:3000
 
 ## 🤝 Расширение
 
